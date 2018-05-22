@@ -100,8 +100,7 @@ def test_model_actionwise(X, y, x_competition):
 
     # preparing train/test dataset
 
-
-    train_ix, test_ix = next(GroupShuffleSplit(n_splits=2, train_size=.75).split(X, y, groups=X['ITEST_id'].values))
+    train_ix, test_ix = next(GroupShuffleSplit(n_splits=2, train_size=.75).split(X, y, groups=X.index.get_level_values(0).values))
     X_train, X_test, y_train, y_test = X.iloc[train_ix], X.iloc[test_ix], y.take(train_ix), y.take(test_ix)
 
     # pre.raw_dataset.to_csv("Debug Dataset/raw_dataset.csv", index=False)
@@ -118,20 +117,21 @@ def test_model_actionwise(X, y, x_competition):
     # DataFrame(y_train).to_csv("Debug Dataset/y_train.csv", index=False)
     # DataFrame(y_test).to_csv("Debug Dataset/y_test.csv", index=False)
 
-    gkf = list(GroupKFold(n_splits=5).split(X_train, y_train, groups=X_train['ITEST_id'].values))
+    gkf = list(GroupKFold(n_splits=5).split(X_train, y_train, groups=X_train.index.get_level_values(0).values))
     model = get_model(gkf)
 
-    model.fit(X_train.drop("ITEST_id", axis=1).values, y_train)
+    model.fit(X_train.values, y_train)
 
-    per_action_pred = model.predict(X_test.drop("ITEST_id", axis=1).values)
-    validation_score = model.score(X_test.drop("ITEST_id", axis=1).values, y_test)
-    print("Validation Score: %f" % validation_score)
+    per_action_pred = model.predict(X_test.values)
+
+    per_action_validation_score = model.score(X_test.values, y_test)
+    print("Per-Action Validation Score: %f" % per_action_validation_score)
 
     DataFrame(per_action_pred).to_csv("Debug Dataset/per_action_pred.csv", index=False)
 
-    per_stud_pred = action2stud_pred(X_test['ITEST_id'].values, per_action_pred)
+    per_stud_pred = action2stud_pred(X_test.index.get_level_values(0).values, per_action_pred)
 
-    per_stud_labels = DataFrame({'ITEST_id': X_test['ITEST_id'].values, 'isSTEM': y_test}).groupby("ITEST_id")[
+    per_stud_labels = DataFrame({'ITEST_id': X_test.index.get_level_values(0).values, 'isSTEM': y_test}).groupby("ITEST_id")[
         'isSTEM'].first().values
 
     # DataFrame(per_stud_labels).to_csv("Debug Dataset/per_stud_labels.csv", index=False)
@@ -168,32 +168,7 @@ def test_model_actionwise(X, y, x_competition):
     # comp_per_stud_pred.to_csv("predicted_labels_comp.csv", index=False)
 
 
-    return validation_score, roc_test_score, mse_test_score, model.best_score_
-
-
-# def test_model_studentwise(x_competition):
-#     # preparing train/test dataset
-#     X, y = pre.load_data(return_as_df=True, summarize=True)
-#
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.75)
-#
-#     model = get_model()
-#
-#     model.fit(X_train, y_train)
-#
-#     pred = model.predict(X_test)
-#
-#     print_scores(model, y_test, pred)
-#
-#     # fitting best model on all data and predicting on competition dataset
-#     comp_fit = model.best_estimator_.fit(X.values, y)
-#     comp_pred = comp_fit.predict(x_competition.drop("ITEST_id", axis=1))
-#
-#     result = DataFrame({'ITEST_id': x_competition['ITEST_id'], 'prediction': comp_pred})
-#     pre.test_dataset.merge(result, on='ITEST_id').to_csv("predicted_labels_comp.csv", index=False)
-#
-#     return model.best_estimator_
-
+    return per_action_validation_score, roc_test_score, mse_test_score, model.best_score_
 
 def action2stud_pred(stud_ids, pred_action_preds):
     # assumes that the pred_action_labels contains predicted labels for stud_ids,
@@ -203,39 +178,24 @@ def action2stud_pred(stud_ids, pred_action_preds):
     # based on summing all per action predictions for each student divided by total number of actions for that student
 
     per_action_label = DataFrame({'ITEST_id': stud_ids, 'prediction': pred_action_preds})
-    per_stud_label = per_action_label.groupby("ITEST_id").size()
+    per_stud_label = per_action_label.groupby(level="ITEST_id").size()
 
     per_stud_label = DataFrame(per_stud_label, columns=["n_actions"])
-    per_stud_label['sum_prediction'] = per_action_label.groupby("ITEST_id")['prediction'].sum()
+    per_stud_label['sum_prediction'] = per_action_label.groupby(level="ITEST_id")['prediction'].sum()
     per_stud_label['ITEST_id'] = per_stud_label.index.values
     per_stud_label['prediction'] = per_stud_label['sum_prediction'] / per_stud_label['n_actions']
 
     return per_stud_label
 
 
-# def print_scores(model, true_label, pred_label):
-#
-#     roc_test = roc_auc_score(true_label, pred_label)
-#     mse_test = mean_squared_error(true_label, pred_label)
-#
-#     print("Test score (ROC): %s" % roc_test)
-#     print("Test score (MSE): %s" % mse_test)
-#     print("Model score: %s" % model.best_score_)
-#     print("Best parameters: %s" % model.best_params_)
-#     print("Best model: %s" % model.best_estimator_)
-#     print("Competition Test Score: %s" % (1 - mse_test + roc_test))
-
-
 pre = Preprocessing()
 
-X_competition, _ = pre.load_data(return_as_df=True, summarize=True, time_gap=1, include_studId=True,
-                                 return_val_tst_set=True)
+# X_competition, _ = pre.load_data(return_val_tst_set=True, time_gap=300)
 
-X_competition = X_competition[chi_selected_features + ['ITEST_id']]
+# X_competition = X_competition[chi_selected_features]
 
-X, y = pre.load_data(return_as_df=True, summarize=True, include_studId=True)
+X, y = pre.load_data(time_gap=300)
 
-X = X[chi_selected_features + ['ITEST_id']]
+X = X[chi_selected_features]
 
-test_model_actionwise(X, y, None)
-# test_model_studentwise(X_competition)
+test_model_actionwise(X, y.values, None)

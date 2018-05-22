@@ -1,0 +1,39 @@
+V8 Checking code and revising the debug files.
+V9 Adding re-sampling approach
+V10 Adding TensorBoard to debug the model
+V11 Reducing LSTM layer to 1 in order to have better interpretation in TensorBoard
+V12 Adding actionId to data in order to debug data-sets 
+    Fixing the wrong column name for x_prepared 
+    Fixing a critical bug: Label assignment was wrong
+V13 Removing masking layer and padding with 0 or 9999
+V14 Removing two outputs
+V15 Returning to masking layer with mask value 99.
+V16 Changing the optimizer to SGD
+V17 Changing the optimizer to rmsprop
+V18 Increasing batch size from 1 to higher
+    Returning to the Adam optimizer
+V19 Separating validation set from data and use fit function with validation_data parameter
+V20 Adding another layer of 100 unit
+V21 Joining per-student features
+V22 Removing the sampling approach
+V23 Adding two output
+V24 Assumes that we are overfitting so we are going to:
+    Removing additional LSTM layer to simplify the model
+    Reducing the number of units for LSTM layer 
+    Reducing the number of features as much as possible
+    Reducing the number of seq length
+V25 Excluding binary variables and some other proportional variables from the standardization step
+V26 Adding competition validation set for making prediction on unlabeled data
+V27 Bringing resampling back to the game!
+V28 Adding Startify splitting
+V29 Inverting the sequence.
+V30 A revolutionary update:
+    Removing the padding and updating the weights with variable-length sequences!
+V31 Testing various model architecture and layers with different number of units
+V31.1 Disabling resampling
+V32 Exclude students with large number of actions e.g. greater than 2000
+V33 Encode categorical features 
+    Using MinMaxScaler
+V34 Removing outliers for MinMax feature scaling
+V36 Adding summarization approach
+V36-Final_presentation Removing comments codes and competition dataset parts and clean-up the project
